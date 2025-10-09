@@ -181,8 +181,6 @@ df_test = df[(df["CloseMonth"] == 08.0) & (df["CloseYear"] == 2025)]
 
 df_train = df[~(df["CloseMonth"] == 08.0)]
 
-print(df.info())
-'''
 #tell what variables to use
 X_train = df_train[["ViewYN", "PostalCode", "PoolPrivateYN", "LivingArea", "YearBuilt", "BathroomsTotalInteger", "BedroomsTotal", "Stories", "NewConstructionYN", "GarageSpaces", "LotSizeSquareFeet"]]
 y_train = df_train["ClosePrice"]
@@ -238,4 +236,4 @@ mape = mean_absolute_percentage_error(y_test, y_pred)
 print("MAPE %:", mape * 100)
 mape_values = np.abs((y_test - y_pred)/y_test) * 100
 median_mape = np.median(mape_values)
-print("Median MAPE:", median_mape)'''
+print("Median MAPE:", median_mape)
