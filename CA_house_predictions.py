@@ -3,11 +3,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import lightgbm as lgb
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score,  mean_absolute_percentage_error, mean_absolute_error
 from sklearn.tree import DecisionTreeRegressor
-
+from catboost import CatBoostRegressor
+from xgboost import XGBRegressor
 
 #preferences
 pd.set_option('display.max_columns', None)
@@ -70,9 +72,7 @@ remove_cols = [
     "ListingKey", 
     "ListAgentEmail",  
     "ListAgentFirstName", 
-    "ListAgentLastName", 
-    "Latitude", 
-    "Longitude", 
+    "ListAgentLastName",  
     "UnparsedAddress",  
     "ListPrice", 
     "DaysOnMarket", 
@@ -93,6 +93,7 @@ remove_cols = [
     "TaxAnnualAmount", 
     "CountyOrParish", 
     "MlsStatus",
+    "City",
     "ElementarySchool",
     "AttachedGarageYN",
     "ParkingTotal",
@@ -102,7 +103,6 @@ remove_cols = [
     "BuyerOfficeAOR",
     "StreetNumberNumeric",
     "ListingId",
-    "City",
     "TaxYear",
     "BuildingAreaTotal",
     "ContractStatusChangeDate",
@@ -147,6 +147,12 @@ df["BedroomsTotal"] = df["BedroomsTotal"].fillna(bedrooms_median)
 bathrooms_median = df["BathroomsTotalInteger"].median()
 df["BathroomsTotalInteger"] = df["BathroomsTotalInteger"].fillna(bathrooms_median)
 
+lat_mean = df["Latitude"].mean()
+df["Latitude"] = df["Latitude"].fillna(lat_mean)
+
+long_mean = df["Longitude"].mean()
+df["Longitude"] = df["Longitude"].fillna(long_mean)
+
 df["NewConstructionYN"] = df["NewConstructionYN"].fillna(0)
 
 stories_median = df["Stories"].median()
@@ -176,16 +182,33 @@ df = df.drop(columns="CloseDate")
 
 df = df[(df["ClosePrice"]>=df["ClosePrice"].quantile(.005))&(df["ClosePrice"]<=df["ClosePrice"].quantile(.995))]
 
+df.loc[df["LivingArea"] <= 100, "LivingArea"] = living_area_median
+df.loc[df["LivingArea"] >= 16080, "LivingArea"] = living_area_median
+
+df.loc[df["BathroomsTotalInteger"] >= 25, "BathroomsTotalInteger"] = bathrooms_median
+df.loc[df["BathroomsTotalInteger"] <= 0, "BathroomsTotalInteger"] = bathrooms_median
+df = df[df["BathroomsTotalInteger"]!=45]
+
+df.loc[df["LotSizeSquareFeet"] <= 500, "LotSizeSquareFeet"] = lot_size_median
+df.loc[df["LotSizeSquareFeet"] >= 50000000, "LotSizeSquareFeet"] = lot_size_median
+
+df.loc[df["BedroomsTotal"] >= 31, "BedroomsTotal"] = bedrooms_median
+df.loc[df["BedroomsTotal"] <= 0, "BedroomsTotal"] = bedrooms_median
+
+#feature engineering
+df["ppsf"] = df["ClosePrice"]/df["LivingArea"]
+df["bed_bath"] = df["BedroomsTotal"]/df["BathroomsTotalInteger"]
+
 #split data for testing and training
 df_test = df[(df["CloseMonth"] == 08.0) & (df["CloseYear"] == 2025)]
 
 df_train = df[~(df["CloseMonth"] == 08.0)]
 
 #tell what variables to use
-X_train = df_train[["ViewYN", "PostalCode", "PoolPrivateYN", "LivingArea", "YearBuilt", "BathroomsTotalInteger", "BedroomsTotal", "Stories", "NewConstructionYN", "GarageSpaces", "LotSizeSquareFeet"]]
+X_train = df_train[["Longitude", "Latitude", "ViewYN", "PostalCode", "PoolPrivateYN", "LivingArea", "YearBuilt", "BathroomsTotalInteger", "BedroomsTotal", "Stories", "NewConstructionYN", "GarageSpaces", "LotSizeSquareFeet"]]
 y_train = df_train["ClosePrice"]
 
-X_test = df_test[["ViewYN", "PostalCode", "PoolPrivateYN", "LivingArea", "YearBuilt", "BathroomsTotalInteger", "BedroomsTotal", "Stories", "NewConstructionYN", "GarageSpaces", "LotSizeSquareFeet"]]
+X_test = df_test[["Longitude", "Latitude", "ViewYN", "PostalCode", "PoolPrivateYN", "LivingArea", "YearBuilt", "BathroomsTotalInteger", "BedroomsTotal", "Stories", "NewConstructionYN", "GarageSpaces", "LotSizeSquareFeet"]]
 y_test = df_test["ClosePrice"]
 
 
@@ -193,28 +216,58 @@ y_test = df_test["ClosePrice"]
 #model = LinearRegression()
 
 #training Random Forest Model
-model = RandomForestRegressor(
+'''model = RandomForestRegressor(
     n_estimators = 500,
     max_depth=None,
     random_state=67,
     min_samples_split=2,
     min_samples_leaf=2,
     n_jobs=-1
-)
+)'''
 
-model = DecisionTreeRegressor(
+'''model = DecisionTreeRegressor(
     max_depth=20,
     min_samples_split=5,
     min_samples_leaf=3,
     random_state=67
-)
+)'''
 
-model = GradientBoostingRegressor(
+'''model = GradientBoostingRegressor(
     n_estimators=500,
     learning_rate=.1,
     max_depth=10,
     subsample=.8,
     random_state=67
+)'''
+
+'''model = CatBoostRegressor(
+    iterations=25000,
+    learning_rate=.05,
+    depth=8,
+    loss_function="RMSE",
+    cat_features=None,
+    verbose=1000,
+    random_state=67
+)'''
+
+'''model = lgb.LGBMRegressor(
+    n_estimators=5000,
+    learning_rate=.05,
+    max_depth=-1,
+    subsample=.8,
+    colsample_bytree=.8,
+    random_state=67
+)'''
+
+model = XGBRegressor(
+    n_estimators=2000,
+    learning_rate=.05,
+    max_depth=8,
+    subsample=.8,
+    colsample_bytree=.8,
+    random_state=67,
+    tree_method="hist",
+    enable_categorical=True
 )
 
 model.fit(X_train, y_train)
@@ -222,7 +275,7 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
 
-#Gradient Boosting Regressor: R^2: 0.84549811013036, RMSE: 362255.6531145345, MAPE %: 14.180844539661678, Median MAPE: 8.842370969370764
+#Gradient Boosting Regressor: R^2: 0.8820594501232086, RMSE: 316504.4697376081, MAE: 152422.49315489206, MAPE %: 12.22444827256976, Median MAPE: 7.919595587641477
 #Random Forest Regressor results: R^2: 0.7981733729751737, RMSE: 414035.42832625436, MAPE %: 16.151178240782073, Median MAPE: 9.633472679394355
 #DecisionTreeRegressor results: R^2: 0.6520970912127946, RMSE: 543597.3155486308, MAPE %: 26.505989890415556, Median MAPE: 17.966200485594783
 #Linear Regressor results: R^2: 0.42680043995468564, RMSE: 697752.1729472455, MAPE %: 46.56291267159915, Median MAPE: 31.32234081762372
@@ -237,3 +290,9 @@ print("MAPE %:", mape * 100)
 mape_values = np.abs((y_test - y_pred)/y_test) * 100
 median_mape = np.median(mape_values)
 print("Median MAPE:", median_mape)
+
+importances = model.feature_importances_
+features_importances = pd.DataFrame({
+    "Feature":X_train.columns,
+    "Importance": importances}).sort_values(by="Importance", ascending=False)
+print(features_importances.head(20))
