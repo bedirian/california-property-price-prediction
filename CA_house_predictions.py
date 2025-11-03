@@ -296,3 +296,17 @@ features_importances = pd.DataFrame({
     "Feature":X_train.columns,
     "Importance": importances}).sort_values(by="Importance", ascending=False)
 print(features_importances.head(20))
+
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred, alpha=0.5, color='royalblue', edgecolors='k')
+plt.plot([y_test.min(), y_test.max()],
+         [y_test.min(), y_test.max()],
+         'r--', lw=2, label='Perfect Prediction')
+
+plt.xlabel("Actual Close Price")
+plt.ylabel("Predicted Close Price")
+plt.title(f"Predicted vs Actual Close Prices ({type(model).__name__})\nR²={r2_score(y_test, y_pred):.3f}, MAE={mae:.0f}")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
