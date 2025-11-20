@@ -126,6 +126,37 @@ remove_cols = [
     "MiddleOrJuniorSchoolDistrict",
     "latfilled",
     "lonfilled"]
+# BathroomsTotalInteger EDA 
+## if "BathroomsTotalInteger" in df.columns:
+    ## print("\nBathroomsTotalInteger Summary Statistics:")
+   ## print(df["BathroomsTotalInteger"].describe())
+   ## print("\nBathroomsTotalInteger Value Counts:")
+   ## print(df["BathroomsTotalInteger"].value_counts().sort_index())
+
+   ## plt.figure(figsize=(8,4))
+   ## sns.histplot(df["BathroomsTotalInteger"], kde=True, bins=30, color="skyblue", edgecolor="k")
+   ## plt.title("Distribution of BathroomsTotalInteger")
+   ## plt.xlabel("BathroomsTotalInteger")
+   ## plt.ylabel("Frequency")
+   ## plt.tight_layout()
+   ## plt.show()
+
+   ## plt.figure(figsize=(6,1.5))
+   ## sns.boxplot(x=df["BathroomsTotalInteger"], color="salmon")
+   ## plt.title("Boxplot of BathroomsTotalInteger")
+   ## plt.tight_layout()
+   ## plt.show()
+## if "ClosePrice" in df.columns:
+       ## plt.figure(figsize=(8,5))
+       ## sns.scatterplot(x="BathroomsTotalInteger", y="ClosePrice", data=df, alpha=0.4)
+      ##  plt.title("BathroomsTotalInteger vs Close Price")
+       ## plt.xlabel("BathroomsTotalInteger")
+       ## plt.ylabel("Close Price")
+       ## plt.tight_layout()
+       ## plt.show()
+
+       ## corr_bath_close = df[["BathroomsTotalInteger", "ClosePrice"]].corr().iloc[0,1]
+       ## print(f"Correlation between BathroomsTotalInteger and ClosePrice: {corr_bath_close:.3f}")
 
 df = df_all.drop(columns=remove_cols)
 df = df[(df["PropertyType"] == "Residential") & (df["PropertySubType"] == "SingleFamilyResidence")]
